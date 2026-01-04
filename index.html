@@ -23,7 +23,7 @@
             .print-only { display: block !important; }
             body { background: white; }
             #view-report { display: block !important; }
-            #view-teacher, #view-admin, #view-records, nav, #toast { display: none !important; }
+            #view-teacher, #view-admin, #view-records, nav, #toast, #modal-confirm { display: none !important; }
         }
     </style>
 </head>
@@ -65,53 +65,69 @@
             <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-600">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-gray-800">Borang Kehadiran</h2>
-                    <div class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                        <i class="fa-solid fa-wifi mr-1"></i> <span id="teacher-db-status">Menyambung...</span>
+                    <div class="flex space-x-2 items-center">
+                         <!-- Editing Indicator -->
+                        <div id="edit-mode-indicator" class="hidden bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                            <i class="fa-solid fa-pen mr-1"></i> Mod Edit
+                        </div>
+                        <div class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            <i class="fa-solid fa-wifi mr-1"></i> <span id="teacher-db-status">Menyambung...</span>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Filters -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-blue-50 p-4 rounded-lg">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Kategori Aktiviti</label>
-                        <select id="filter-category" onchange="updateUnitOptions()" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">-- Pilih Kategori --</option>
-                            <option value="uniform">Unit Beruniform</option>
-                            <option value="club">Kelab & Persatuan</option>
-                            <option value="sport">Sukan & Permainan</option>
-                        </select>
+                <div class="bg-blue-50 p-4 rounded-lg mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Kategori Aktiviti</label>
+                            <select id="filter-category" onchange="updateUnitOptions()" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="">-- Pilih Kategori --</option>
+                                <option value="uniform">Unit Beruniform</option>
+                                <option value="club">Kelab & Persatuan</option>
+                                <option value="sport">Sukan & Permainan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Unit/Kelab/Sukan</label>
+                            <select id="filter-unit" onchange="loadStudentsForAttendance()" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" disabled>
+                                <option value="">-- Sila Pilih Kategori Dulu --</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Unit/Kelab/Sukan</label>
-                        <select id="filter-unit" onchange="loadStudentsForAttendance()" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" disabled>
-                            <option value="">-- Sila Pilih Kategori Dulu --</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Tapis Mengikut Kelas (Pilihan)</label>
-                        <select id="filter-class" onchange="loadStudentsForAttendance()" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="all">Semua Kelas</option>
-                            <!-- Options populated by JS -->
-                        </select>
+                    
+                    <!-- Search & Class Filter -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-blue-200">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1"><i class="fa-solid fa-filter mr-1"></i>Tapis Kelas (Bantu Cari)</label>
+                            <select id="filter-class" onchange="loadStudentsForAttendance()" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="all">Semua Kelas</option>
+                                <!-- Options populated by JS -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1"><i class="fa-solid fa-magnifying-glass mr-1"></i>Cari Nama Murid</label>
+                            <input type="text" id="search-student" onkeyup="loadStudentsForAttendance()" placeholder="Taip nama murid..." class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
                     </div>
                 </div>
 
                 <!-- Attendance Table -->
-                <div class="overflow-x-auto mb-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-semibold">Senarai Nama (Default: Hadir)</h3>
+                <div class="overflow-x-auto mb-6 max-h-[500px] overflow-y-auto border rounded">
+                    <div class="flex justify-between items-center mb-2 p-2 bg-gray-50 sticky top-0 z-10 border-b">
+                        <h3 class="text-lg font-semibold">Senarai Nama</h3>
                         <div class="text-sm text-gray-500" id="student-count">Memuatkan data...</div>
                     </div>
                     
                     <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                                <th class="py-3 px-4 text-center w-16">
+                        <thead class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal sticky top-12 z-10">
+                            <tr>
+                                <th class="py-3 px-4 text-center w-16 bg-gray-100">
                                     <input type="checkbox" id="check-all" onclick="toggleAll(this)" class="w-5 h-5 text-blue-600 rounded cursor-pointer" checked>
                                 </th>
-                                <th class="py-3 px-4">Nama Murid</th>
-                                <th class="py-3 px-4">Kelas</th>
-                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4 bg-gray-100">Nama Murid</th>
+                                <th class="py-3 px-4 bg-gray-100">Kelas</th>
+                                <th class="py-3 px-4 bg-gray-100">Status</th>
                             </tr>
                         </thead>
                         <tbody id="attendance-list" class="text-gray-600 text-sm">
@@ -125,6 +141,19 @@
                 <!-- Activity Report Form Section -->
                 <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 mb-6">
                     <h3 class="font-bold text-lg text-gray-800 mb-3"><i class="fa-solid fa-pen-to-square mr-2"></i>Laporan Aktiviti & Maklumat Guru</h3>
+                    
+                    <!-- NEW: Week & Time -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Minggu</label>
+                            <input type="text" id="activity-week" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none" placeholder="Cth: Minggu 1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Masa</label>
+                            <input type="text" id="activity-time" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none" placeholder="Cth: 2.00 - 4.00 Petang">
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                          <!-- Teacher Info -->
                          <div>
@@ -155,7 +184,8 @@
 
                 <!-- Action Buttons -->
                 <div class="flex justify-end space-x-3">
-                    <button onclick="resetAttendanceForm()" class="px-5 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">Reset</button>
+                    <button onclick="cancelEditMode()" id="btn-cancel-edit" class="hidden px-5 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition">Batal Edit</button>
+                    <button onclick="resetAttendanceForm()" id="btn-reset" class="px-5 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">Reset</button>
                     <button onclick="submitAttendance()" id="btn-submit-attendance" class="px-6 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow-md transition flex items-center">
                         <i class="fa-solid fa-paper-plane mr-2"></i> Sahkan & Hantar Laporan
                     </button>
@@ -167,32 +197,40 @@
         <div id="view-records" class="hidden-section space-y-6">
             <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-indigo-500">
                 <h2 class="text-2xl font-bold mb-4 text-gray-800">Rekod Laporan Kehadiran</h2>
-                <p class="text-sm text-gray-500 mb-6">Senarai laporan yang telah dihantar. Klik "Lihat" untuk butiran atau cetak.</p>
+                <p class="text-sm text-gray-500 mb-6">Senarai laporan yang telah dihantar. Anda boleh kemaskini atau padam laporan di sini.</p>
 
                 <!-- Record Filters -->
                 <div class="flex flex-col md:flex-row gap-4 mb-6 bg-indigo-50 p-4 rounded-lg">
                     <div class="flex-1">
-                         <label class="block text-sm font-semibold text-gray-700 mb-1">Tapis Unit</label>
-                         <input type="text" id="record-filter-unit" onkeyup="filterRecords()" placeholder="Cari nama unit..." class="w-full p-2 border rounded">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Pilih Minggu</label>
+                        <select id="record-filter-week" onchange="filterRecords()" class="w-full p-2 border rounded">
+                            <option value="">-- Semua Minggu --</option>
+                            <!-- Populated by JS -->
+                        </select>
                     </div>
                     <div class="flex-1">
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Tapis Tarikh</label>
-                        <input type="date" id="record-filter-date" onchange="filterRecords()" class="w-full p-2 border rounded">
-                   </div>
-                   <div class="flex items-end">
-                       <button onclick="loadReportsFromFirestore()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 w-full"><i class="fa-solid fa-rotate mr-2"></i> Refresh</button>
-                   </div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Pilih Kategori</label>
+                        <select id="record-filter-category" onchange="filterRecords()" class="w-full p-2 border rounded">
+                            <option value="">-- Semua Kategori --</option>
+                            <option value="uniform">Unit Beruniform</option>
+                            <option value="club">Kelab & Persatuan</option>
+                            <option value="sport">Sukan & Permainan</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="loadReportsFromFirestore()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 w-full"><i class="fa-solid fa-rotate mr-2"></i> Refresh</button>
+                    </div>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-gray-100 text-gray-600 uppercase text-sm">
                             <tr>
-                                <th class="p-3">Tarikh</th>
+                                <th class="p-3">Minggu / Tarikh</th>
                                 <th class="p-3">Unit</th>
                                 <th class="p-3">Aktiviti</th>
                                 <th class="p-3 text-center">Kehadiran</th>
-                                <th class="p-3 text-center">Aksi</th>
+                                <th class="p-3 text-center w-40">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="records-list" class="text-sm text-gray-700 divide-y">
@@ -225,6 +263,14 @@
                                 <span class="block text-blue-800 font-bold" id="report-unit">-</span>
                             </div>
                             <div>
+                                <span class="block font-semibold text-gray-600">Minggu:</span>
+                                <span class="block text-gray-800" id="report-week-display">-</span>
+                            </div>
+                            <div>
+                                <span class="block font-semibold text-gray-600">Masa:</span>
+                                <span class="block text-gray-800" id="report-time-display">-</span>
+                            </div>
+                            <div>
                                 <span class="block font-semibold text-gray-600">Aktiviti:</span>
                                 <span class="block text-gray-800" id="report-topic-display">-</span>
                             </div>
@@ -253,6 +299,7 @@
                                     <span class="block text-3xl font-bold text-red-800" id="report-absent">0</span>
                                 </div>
                             </div>
+                            <p class="text-xs text-center text-gray-500 mt-2 italic">*Mengambil kira semua ahli unit walaupun berlainan kelas</p>
                         </div>
                     </div>
                 </div>
@@ -343,7 +390,7 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
                     </div>
 
                     <div class="flex items-center space-x-2">
-                        <span class="text-xs text-gray-500" id="db-status">Status: Menyambung...</span>
+                        <span class="text-xs text-green-600 font-bold" id="db-status">Online</span>
                         <button onclick="clearAllData()" class="text-xs text-red-500 hover:text-red-700 underline ml-2">Padam Semua</button>
                     </div>
                 </div>
@@ -370,14 +417,14 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
 
     </main>
 
-    <!-- Modal Confirm -->
+    <!-- Modal Confirm Delete (Generic) -->
     <div id="modal-confirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 no-print">
         <div class="bg-white rounded-lg p-6 w-96 shadow-xl">
             <h3 class="text-lg font-bold mb-2">Sahkan Tindakan?</h3>
-            <p class="text-gray-600 mb-4 text-sm">Adakah anda pasti mahu memadam semua data murid dari Database? Tindakan ini tidak boleh dikembalikan.</p>
+            <p id="modal-msg" class="text-gray-600 mb-4 text-sm">Adakah anda pasti mahu meneruskan tindakan ini?</p>
             <div class="flex justify-end space-x-2">
-                <button onclick="document.getElementById('modal-confirm').classList.add('hidden')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Batal</button>
-                <button onclick="performClearAll()" id="btn-confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Ya, Padam</button>
+                <button onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Batal</button>
+                <button id="btn-confirm-action" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Ya, Sahkan</button>
             </div>
         </div>
     </div>
@@ -386,7 +433,7 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
     <script type="module">
         // Import Firebase Functions from CDN
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, writeBatch, query, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, writeBatch, query, orderBy, Timestamp, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         // Firebase Configuration
@@ -409,6 +456,27 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
         let students = [];
         let reports = [];
         let isLoading = false;
+        let currentReportId = null; // Used for editing
+        
+        // Attendance State Management (ID -> boolean)
+        // true = Hadir (default), false = Tidak Hadir
+        let attendanceMap = new Map(); 
+
+        // Initialize Helper for View Report immediately
+        window.viewReportData = function(obj) {
+            let fullReport = null;
+            if(obj.topic) {
+                fullReport = obj;
+            } else if (obj.id) {
+                fullReport = reports.find(r => r.id === obj.id);
+            }
+
+            if(fullReport && window.displayReport) {
+                window.displayReport(fullReport);
+            } else {
+                console.error("Report data not found or displayReport function missing.");
+            }
+        }
 
         // --- Auth & Initial Load ---
         onAuthStateChanged(auth, (user) => {
@@ -422,7 +490,6 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
                     }
                 });
                 loadStudentsFromFirestore();
-                // We load reports only when Records view is clicked to save bandwidth
             } else {
                 signInAnonymously(auth).catch((error) => {
                     console.error("Auth Error", error);
@@ -472,6 +539,7 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
                     reports.push({ id: doc.id, ...doc.data() });
                 });
 
+                populateRecordWeekFilter(); // Populate Weeks
                 filterRecords(); // Render list
                 
             } catch (e) {
@@ -484,6 +552,8 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             const btn = document.getElementById('btn-submit-attendance');
             const category = document.getElementById('filter-category').value;
             const unit = document.getElementById('filter-unit').value;
+            const week = document.getElementById('activity-week').value;
+            const time = document.getElementById('activity-time').value;
             const topic = document.getElementById('activity-topic').value;
             const objective = document.getElementById('activity-objective').value;
             const kbat = document.getElementById('activity-kbat').value;
@@ -492,32 +562,52 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             
             if(!category || !unit) return showToast("Sila pilih Unit dahulu!", true);
             if(!teacherName) return showToast("Sila masukkan Nama Guru!", true);
-            if(!topic || !objective || !kbat) return showToast("Sila lengkapkan laporan!", true);
-
-            const checkboxes = document.getElementsByName('attendance_check');
-            if(checkboxes.length === 0) return showToast("Tiada murid dalam senarai.", true);
+            if(!week || !time || !topic || !objective || !kbat) return showToast("Sila lengkapkan semua maklumat laporan!", true);
 
             btn.disabled = true;
-            btn.innerText = "Menghantar...";
+            btn.innerText = currentReportId ? "Mengemaskini..." : "Menghantar...";
+
+            // CALCULATION LOGIC CHANGE:
+            // Filter ALL students for this unit (ignoring class filter)
+            const allUnitStudents = students.filter(s => s[category] === unit);
+            
+            if(allUnitStudents.length === 0) {
+                 btn.disabled = false;
+                 btn.innerText = "Sahkan & Hantar Laporan";
+                 return showToast("Tiada murid dalam unit ini.", true);
+            }
 
             let presentCount = 0;
             let absentCount = 0;
             let allStudentsStatus = [];
 
-            for (let chk of checkboxes) {
-                const name = chk.getAttribute('data-name');
-                const cls = chk.getAttribute('data-class');
-                const status = chk.checked ? 'Hadir' : 'Tidak Hadir';
+            // Loop through ALL students in this unit to calculate final status
+            allUnitStudents.forEach(s => {
+                // If ID is in map, use it. If not, default to TRUE (Hadir)
+                const isPresent = attendanceMap.has(s.id) ? attendanceMap.get(s.id) : true;
                 
-                if (chk.checked) presentCount++; else absentCount++;
-                allStudentsStatus.push({ name, class: cls, status });
-            }
+                if (isPresent) presentCount++; else absentCount++;
+                
+                allStudentsStatus.push({ 
+                    name: s.name, 
+                    class: s.class, 
+                    status: isPresent ? 'Hadir' : 'Tidak Hadir' 
+                });
+            });
+
+            // Sort list by status (Absent first), then class
+            allStudentsStatus.sort((a, b) => {
+                if (a.status !== b.status) return a.status === 'Tidak Hadir' ? -1 : 1;
+                return a.class.localeCompare(b.class);
+            });
 
             const reportData = {
                 date: new Date(),
                 dateString: new Date().toLocaleDateString('ms-MY'),
                 category,
                 unit,
+                week,
+                time,
                 topic,
                 objective,
                 kbat,
@@ -529,18 +619,110 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             };
 
             try {
-                await addDoc(collection(db, "reports"), reportData);
+                if (currentReportId) {
+                    await updateDoc(doc(db, "reports", currentReportId), reportData);
+                    showToast("Laporan berjaya dikemaskini!");
+                } else {
+                    await addDoc(collection(db, "reports"), reportData);
+                    showToast("Laporan berjaya dihantar!");
+                }
                 
-                // Show Report
-                window.viewReportData(reportData);
-                showToast("Laporan berjaya dihantar dan disimpan!");
+                if (window.displayReport) window.displayReport(reportData);
+                
+                // Reset edit mode & state
+                currentReportId = null;
+                attendanceMap.clear(); // Clear memory after submit
+                document.getElementById('edit-mode-indicator').classList.add('hidden');
+                document.getElementById('btn-cancel-edit').classList.add('hidden');
+                document.getElementById('btn-reset').classList.remove('hidden');
+                document.getElementById('btn-submit-attendance').innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Sahkan & Hantar Laporan`;
+
             } catch (e) {
                 console.error("Error saving report: ", e);
                 showToast("Gagal menyimpan laporan. Sila cuba lagi.", true);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Sahkan & Hantar Laporan`;
+                if(!currentReportId) btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Sahkan & Hantar Laporan`;
             }
+        }
+
+        window.deleteReport = function(id) {
+            const modal = document.getElementById('modal-confirm');
+            const msg = document.getElementById('modal-msg');
+            const confirmBtn = document.getElementById('btn-confirm-action');
+
+            msg.innerText = "Adakah anda pasti mahu memadam laporan ini? Ia tidak boleh dikembalikan.";
+            modal.classList.remove('hidden');
+
+            confirmBtn.onclick = async function() {
+                confirmBtn.innerText = "Memadam...";
+                confirmBtn.disabled = true;
+                try {
+                    await deleteDoc(doc(db, "reports", id));
+                    showToast("Laporan dipadam.");
+                    window.loadReportsFromFirestore();
+                    modal.classList.add('hidden');
+                } catch(e) {
+                    showToast("Gagal memadam.", true);
+                } finally {
+                    confirmBtn.innerText = "Ya, Sahkan";
+                    confirmBtn.disabled = false;
+                }
+            }
+        }
+
+        window.editReport = function(id) {
+            const report = reports.find(r => r.id === id);
+            if(!report) return;
+
+            currentReportId = id;
+            attendanceMap.clear(); // Clear current state
+            
+            // Switch to teacher view
+            switchView('teacher');
+            
+            // Populate state map from report
+            report.attendees.forEach(a => {
+                // We need to map Name back to ID if possible. 
+                // Since report stores Name/Class/Status but not ID directly in older versions, 
+                // we try to find the student in current list by name
+                const student = students.find(s => s.name === a.name && s.class === a.class);
+                if(student) {
+                    attendanceMap.set(student.id, a.status === 'Hadir');
+                }
+            });
+
+            // Set UI to Edit Mode
+            document.getElementById('edit-mode-indicator').classList.remove('hidden');
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            document.getElementById('btn-reset').classList.add('hidden');
+            document.getElementById('btn-submit-attendance').innerHTML = `<i class="fa-solid fa-pen-to-square mr-2"></i> Kemaskini Laporan`;
+
+            // Populate Fields
+            document.getElementById('filter-category').value = report.category;
+            updateUnitOptions(); 
+            document.getElementById('filter-unit').value = report.unit;
+            document.getElementById('activity-week').value = report.week || '';
+            document.getElementById('activity-time').value = report.time || '';
+            document.getElementById('activity-topic').value = report.topic;
+            document.getElementById('activity-objective').value = report.objective;
+            document.getElementById('activity-kbat').value = report.kbat;
+            document.getElementById('teacher-name').value = report.teacherName;
+            document.getElementById('teacher-position').value = report.teacherPos;
+
+            loadStudentsForAttendance();
+            showToast("Mod Edit diaktifkan.");
+        }
+
+        window.cancelEditMode = function() {
+            currentReportId = null;
+            attendanceMap.clear();
+            document.getElementById('edit-mode-indicator').classList.add('hidden');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            document.getElementById('btn-reset').classList.remove('hidden');
+            document.getElementById('btn-submit-attendance').innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Sahkan & Hantar Laporan`;
+            resetAttendanceForm();
+            showToast("Mod Edit dibatalkan.");
         }
 
         // --- Admin Functions ---
@@ -636,41 +818,60 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             btn.innerText = "Proses & Simpan ke Database";
         }
 
-        window.deleteStudent = async function(id) {
-            if(confirm("Padam murid ini?")) {
+        window.triggerDeleteStudent = function(id) {
+            const modal = document.getElementById('modal-confirm');
+            const msg = document.getElementById('modal-msg');
+            const confirmBtn = document.getElementById('btn-confirm-action');
+
+            msg.innerText = "Adakah anda pasti mahu memadam murid ini? Data akan hilang dari database.";
+            modal.classList.remove('hidden');
+
+            confirmBtn.onclick = async function() {
+                confirmBtn.innerText = "Memadam...";
+                confirmBtn.disabled = true;
                 try {
                     await deleteDoc(doc(db, "students", id));
                     showToast("Murid dipadam.");
-                    loadStudentsFromFirestore();
-                } catch (e) {
+                    window.loadStudentsFromFirestore(); // Reload admin list
+                    modal.classList.add('hidden');
+                } catch(e) {
                     showToast("Gagal memadam.", true);
+                } finally {
+                    confirmBtn.innerText = "Ya, Sahkan";
+                    confirmBtn.disabled = false;
                 }
             }
         }
+        
+        window.deleteStudent = window.triggerDeleteStudent;
+        window.loadStudentsFromFirestore = loadStudentsFromFirestore;
 
         window.performClearAll = async function() {
-            const btn = document.getElementById('btn-confirm-delete');
-            btn.disabled = true;
-            btn.innerText = "Memadam...";
-            try {
-                const q = query(collection(db, "students"));
-                const snapshot = await getDocs(q);
-                const deletePromises = [];
-                snapshot.forEach((doc) => { deletePromises.push(deleteDoc(doc.ref)); });
-                await Promise.all(deletePromises);
-                document.getElementById('modal-confirm').classList.add('hidden');
-                showToast("Semua data dipadam.", true);
-                loadStudentsFromFirestore();
-            } catch (e) {
-                showToast("Ralat memadam.", true);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Ya, Padam";
+            const modal = document.getElementById('modal-confirm');
+            const msg = document.getElementById('modal-msg');
+            const confirmBtn = document.getElementById('btn-confirm-action');
+
+            msg.innerText = "Adakah anda pasti mahu memadam SEMUA data murid? Data ini tidak boleh dikembalikan.";
+            modal.classList.remove('hidden');
+
+            confirmBtn.onclick = async function() {
+               if(window.performClearAll) {
+                   alert("Sila gunakan butang Padam di dalam modul Admin untuk fungsi ini.");
+                   modal.classList.add('hidden');
+               }
             }
         }
-
-        // --- Helper Functions Exposed ---
         
+        // --- Helpers for State Management ---
+
+        window.updateAttendanceState = function(id, isChecked) {
+            attendanceMap.set(id, isChecked);
+        }
+
+        window.toggleAllAttendanceState = function(isChecked, visibleIds) {
+            visibleIds.forEach(id => attendanceMap.set(id, isChecked));
+        }
+
         // Render Admin Table with Filter
         window.renderAdminTable = function() {
             const tbody = document.getElementById('admin-student-list');
@@ -683,7 +884,6 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
                 return;
             }
 
-            // Filter students based on Admin selection
             const displayedStudents = students.filter(s => filterClass === 'all' || s.class === filterClass);
 
             if (displayedStudents.length === 0) {
@@ -708,58 +908,69 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             });
         }
 
-        // Render Records List
+        window.populateRecordWeekFilter = function() {
+            const weekSelect = document.getElementById('record-filter-week');
+            // Get unique weeks, filter out empty/undefined, sort them
+            const weeks = [...new Set(reports.map(r => r.week).filter(w => w))].sort();
+            
+            // Save current selection if possible
+            const currentVal = weekSelect.value;
+            
+            weekSelect.innerHTML = '<option value="">-- Semua Minggu --</option>';
+            weeks.forEach(w => {
+                const opt = document.createElement('option');
+                opt.value = w;
+                opt.innerText = w;
+                weekSelect.appendChild(opt);
+            });
+            
+            if(weeks.includes(currentVal)) weekSelect.value = currentVal;
+        }
+
         window.filterRecords = function() {
-            const filterUnit = document.getElementById('record-filter-unit').value.toLowerCase();
-            const filterDate = document.getElementById('record-filter-date').value;
+            const filterWeek = document.getElementById('record-filter-week').value;
+            const filterCategory = document.getElementById('record-filter-category').value;
             const tbody = document.getElementById('records-list');
             
             tbody.innerHTML = '';
 
             const filtered = reports.filter(r => {
-                // Convert timestamp to date string YYYY-MM-DD for comparison if needed, 
-                // but simple string match on dateString usually enough for display
-                let dateMatch = true;
-                if(filterDate) {
-                     // r.date is Firestore Timestamp. Convert to JS Date
-                     const rDate = r.date.toDate ? r.date.toDate() : new Date(r.date);
-                     const yyyy = rDate.getFullYear();
-                     const mm = String(rDate.getMonth() + 1).padStart(2, '0');
-                     const dd = String(rDate.getDate()).padStart(2, '0');
-                     const rDateStr = `${yyyy}-${mm}-${dd}`;
-                     dateMatch = rDateStr === filterDate;
-                }
-                
-                const unitMatch = r.unit.toLowerCase().includes(filterUnit);
-                return unitMatch && dateMatch;
+                const weekMatch = filterWeek === "" || r.week === filterWeek;
+                const categoryMatch = filterCategory === "" || r.category === filterCategory;
+                return weekMatch && categoryMatch;
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">Tiada rekod ditemui.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">Tiada rekod ditemui untuk minggu ini.</td></tr>`;
                 return;
             }
 
             filtered.forEach((r, index) => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-indigo-50 border-b cursor-pointer transition";
-                tr.onclick = () => window.viewReportData(r); // Click row to view
+                tr.className = "hover:bg-indigo-50 border-b transition";
                 
-                // Format Date
                 let displayDate = r.dateString;
                 if(r.date && r.date.seconds) {
                     displayDate = new Date(r.date.seconds * 1000).toLocaleDateString('ms-MY');
                 }
 
+                // Show week alongside date
+                const displayWeek = r.week ? `(${r.week})` : '';
+
                 tr.innerHTML = `
-                    <td class="p-3 font-medium text-indigo-700">${displayDate}</td>
-                    <td class="p-3 font-bold">${r.unit}</td>
-                    <td class="p-3 text-gray-600 truncate max-w-xs">${r.topic}</td>
-                    <td class="p-3 text-center">
+                    <td class="p-3 font-medium text-indigo-700 cursor-pointer" onclick="viewReportData({id: '${r.id}'})">
+                        ${displayDate} <span class="text-xs text-gray-500 block">${displayWeek}</span>
+                    </td>
+                    <td class="p-3 font-bold cursor-pointer" onclick="viewReportData({id: '${r.id}'})">${r.unit}</td>
+                    <td class="p-3 text-gray-600 truncate max-w-xs cursor-pointer" onclick="viewReportData({id: '${r.id}'})">${r.topic}</td>
+                    <td class="p-3 text-center cursor-pointer" onclick="viewReportData({id: '${r.id}'})">
                         <span class="text-green-600 font-bold">${r.presentCount}</span> / 
                         <span class="text-red-500 font-bold">${r.absentCount}</span>
                     </td>
-                    <td class="p-3 text-center">
-                        <button class="text-indigo-600 hover:text-indigo-800 text-sm underline">Lihat</button>
+                    <td class="p-3 text-center flex justify-center space-x-2">
+                        <button onclick="viewReportData({id: '${r.id}'})" class="text-blue-600 hover:text-blue-800" title="Lihat"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="editReport('${r.id}')" class="text-yellow-600 hover:text-yellow-800" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteReport('${r.id}')" class="text-red-600 hover:text-red-800" title="Padam"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -772,7 +983,6 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
         }
 
         window.populateClassFilter = function() {
-            // Teacher Filter
             const teacherSelect = document.getElementById('filter-class');
             const adminSelect = document.getElementById('admin-filter-class');
             
@@ -781,7 +991,7 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
                 uniqueClasses.map(c => `<option value="${c}">${c}</option>`).join('');
 
             teacherSelect.innerHTML = optionsHTML;
-            adminSelect.innerHTML = optionsHTML; // Populate Admin filter too
+            adminSelect.innerHTML = optionsHTML; 
         }
 
         window.updateUnitOptions = function() {
@@ -789,6 +999,10 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             const unitSelect = document.getElementById('filter-unit');
             unitSelect.innerHTML = '<option value="">-- Pilih Unit --</option>';
             document.getElementById('attendance-list').innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">Sila pilih unit khusus.</td></tr>';
+            
+            // Clear attendance map when unit changes
+            attendanceMap.clear();
+
             if (!category) { unitSelect.disabled = true; return; }
             unitSelect.disabled = false;
             window.getUniqueValues(category).forEach(unit => {
@@ -801,6 +1015,8 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             const category = document.getElementById('filter-category').value;
             const selectedUnit = document.getElementById('filter-unit').value;
             const selectedClass = document.getElementById('filter-class').value;
+            const searchText = document.getElementById('search-student').value.toLowerCase();
+            
             const listBody = document.getElementById('attendance-list');
             const countDisplay = document.getElementById('student-count');
             
@@ -815,7 +1031,8 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             const filteredStudents = students.filter(s => {
                 const matchUnit = s[category] === selectedUnit;
                 const matchClass = selectedClass === 'all' || s.class === selectedClass;
-                return matchUnit && matchClass;
+                const matchSearch = s.name.toLowerCase().includes(searchText);
+                return matchUnit && matchClass && matchSearch;
             });
 
             filteredStudents.sort((a, b) => a.class.localeCompare(b.class) || a.name.localeCompare(b.name));
@@ -828,15 +1045,18 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
 
             listBody.innerHTML = '';
             filteredStudents.forEach(s => {
+                // Determine checked state from Map or Default True
+                const isChecked = attendanceMap.has(s.id) ? attendanceMap.get(s.id) : true;
+
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-blue-50 border-b transition";
                 tr.innerHTML = `
-                    <td class="p-3 text-center">
-                        <input type="checkbox" name="attendance_check" value="${s.id}" data-name="${s.name}" data-class="${s.class}" class="w-5 h-5 text-blue-600 rounded cursor-pointer" checked onchange="updateRowStatus(this)">
+                    <td class="p-3 text-center bg-white">
+                        <input type="checkbox" name="attendance_check" value="${s.id}" data-name="${s.name}" data-class="${s.class}" class="w-5 h-5 text-blue-600 rounded cursor-pointer" ${isChecked ? 'checked' : ''} onchange="handleCheckboxChange(this, '${s.id}')">
                     </td>
-                    <td class="p-3 font-medium text-gray-800">${s.name}</td>
-                    <td class="p-3 text-gray-600 text-xs font-bold"><span class="bg-gray-200 px-2 py-1 rounded">${s.class}</span></td>
-                    <td class="p-3 text-sm font-bold text-green-600 status-text">HADIR</td>
+                    <td class="p-3 font-medium text-gray-800 bg-white">${s.name}</td>
+                    <td class="p-3 text-gray-600 text-xs font-bold bg-white"><span class="bg-gray-200 px-2 py-1 rounded">${s.class}</span></td>
+                    <td class="p-3 text-sm font-bold ${isChecked ? 'text-green-600' : 'text-red-500'} status-text bg-white">${isChecked ? 'HADIR' : 'TIDAK HADIR'}</td>
                 `;
                 listBody.appendChild(tr);
             });
@@ -892,25 +1112,59 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             reader.readAsText(file);
         }
 
-        function clearAllData() { document.getElementById('modal-confirm').classList.remove('hidden'); }
+        function clearAllData() { 
+            const modal = document.getElementById('modal-confirm');
+            const msg = document.getElementById('modal-msg');
+            const confirmBtn = document.getElementById('btn-confirm-action');
+
+            msg.innerText = "Adakah anda pasti mahu memadam SEMUA data murid? Data ini tidak boleh dikembalikan.";
+            modal.classList.remove('hidden');
+
+            confirmBtn.onclick = async function() {
+               if(window.performClearAll) {
+                   alert("Sila gunakan butang Padam di dalam modul Admin untuk fungsi ini.");
+                   modal.classList.add('hidden');
+               }
+            }
+        }
         
+        function closeModal() {
+            document.getElementById('modal-confirm').classList.add('hidden');
+        }
+
+        // Added missing function wrapper
+        function handleCheckboxChange(checkbox, id) {
+             if(window.updateAttendanceState) {
+                 window.updateAttendanceState(id, checkbox.checked);
+             }
+             updateRowStatus(checkbox);
+        }
+
         function updateRowStatus(checkbox) {
             const row = checkbox.closest('tr');
             const statusText = row.querySelector('.status-text');
             if(checkbox.checked) {
                 statusText.innerText = "HADIR";
-                statusText.className = "p-3 text-sm font-bold text-green-600 status-text";
+                statusText.className = "p-3 text-sm font-bold text-green-600 status-text bg-white";
             } else {
                 statusText.innerText = "TIDAK HADIR";
-                statusText.className = "p-3 text-sm font-bold text-red-500 status-text";
+                statusText.className = "p-3 text-sm font-bold text-red-500 status-text bg-white";
             }
         }
 
         function toggleAll(source) {
             const checkboxes = document.getElementsByName('attendance_check');
+            let visibleIds = [];
+            
             for(let i=0, n=checkboxes.length;i<n;i++) {
                 checkboxes[i].checked = source.checked;
                 updateRowStatus(checkboxes[i]);
+                // Collect IDs to update state
+                visibleIds.push(checkboxes[i].value); 
+            }
+
+            if(window.toggleAllAttendanceState) {
+                window.toggleAllAttendanceState(source.checked, visibleIds);
             }
         }
 
@@ -918,16 +1172,22 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             document.getElementById('filter-category').value = "";
             window.updateUnitOptions();
             document.getElementById('filter-class').value = "all";
+            document.getElementById('search-student').value = ""; // Reset search
             document.getElementById('check-all').checked = true;
+            document.getElementById('activity-week').value = "";
+            document.getElementById('activity-time').value = "";
             document.getElementById('activity-topic').value = "";
             document.getElementById('activity-objective').value = "";
             document.getElementById('activity-kbat').value = "";
             document.getElementById('teacher-name').value = "";
             document.getElementById('teacher-position').value = "";
+            
+            // Exit Edit Mode if active
+            if(window.cancelEditMode) window.cancelEditMode();
         }
 
         // Shared View Report Function
-        window.viewReportData = function(data) {
+        window.displayReport = function(data) {
             // Hide all views first
             document.getElementById('view-teacher').classList.add('hidden-section');
             document.getElementById('view-admin').classList.add('hidden-section');
@@ -947,6 +1207,8 @@ Siti Aminah, 4 Kreatif, PBSM, STEM, Bola Jaring"></textarea>
             document.getElementById('report-present').innerText = data.presentCount;
             document.getElementById('report-absent').innerText = data.absentCount;
             
+            document.getElementById('report-week-display').innerText = data.week || '-';
+            document.getElementById('report-time-display').innerText = data.time || '-';
             document.getElementById('report-topic-display').innerText = data.topic;
             document.getElementById('report-objective-display').innerText = data.objective;
             document.getElementById('report-kbat-display').innerText = data.kbat;
